@@ -78,6 +78,24 @@ int opus_head_parse(OpusHead *_head,const unsigned char *_data,size_t _len){
     }
     if(_head!=NULL)memcpy(_head->mapping,_data+21,head.channel_count);
   }
+  else if(head.mapping_family==252){
+    size_t size;
+    int    ci;
+    if(head.channel_count<1||head.channel_count>16)return OP_EBADHEADER;
+    size=21+head.channel_count;
+    if(_len<size||head.version<=1&&_len>size)return OP_EBADHEADER;
+    head.stream_count=_data[19];
+    if(head.stream_count<1)return OP_EBADHEADER;
+    head.coupled_count=_data[20];
+    if(head.coupled_count>head.stream_count)return OP_EBADHEADER;
+    for(ci=0;ci<head.channel_count;ci++){
+      if(_data[21+ci]>=head.stream_count+head.coupled_count
+       &&_data[21+ci]!=255){
+        return OP_EBADHEADER;
+      }
+    }
+    if(_head!=NULL)memcpy(_head->mapping,_data+21,head.channel_count);
+  }
   /*General purpose players should not attempt to play back content with
      channel mapping family 255.*/
   else if(head.mapping_family==255)return OP_EIMPL;
